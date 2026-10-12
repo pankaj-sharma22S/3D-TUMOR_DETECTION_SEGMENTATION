@@ -12,7 +12,9 @@
 </p>
 
 <p align="center">
-  <img src="src/Screenshot%202026-10-12%20211436.png" alt="Interactive 3D brain tumor segmentation preview" width="800">
+  <img src="src/Screenshot%202026-10-12%20210557.png" alt="3D brain tumor segmentation preview" width="32%">
+  <img src="src/Screenshot%202026-10-12%20211436.png" alt="Interactive 3D brain tumor segmentation preview" width="32%">
+  <img src="src/image.png" alt="3D brain tumor visualization with tumor regions inside the brain" width="32%">
 </p>
 
 ## Project overview
