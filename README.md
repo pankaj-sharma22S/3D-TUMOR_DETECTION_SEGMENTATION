@@ -1,196 +1,144 @@
-<h1 align="center"><span style="color:#2563eb">Brain Tumor Segmentation</span> using U-Net</h1>
+<h1 align="center">Brain Tumor Segmentation with U-Net</h1>
 
 <p align="center">
-  <img src="src/Screenshot%202026-10-12%20210557.png" alt="3D brain tumor segmentation preview" width="48%">
-  <img src="src/image.png" alt="3D brain tumor visualization with tumor regions inside the brain" width="48%">
+  <strong>Pixel-wise MRI segmentation with an interactive Streamlit viewer</strong>
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11">
   <img src="https://img.shields.io/badge/TensorFlow-Keras-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white" alt="TensorFlow and Keras">
-  <img src="https://img.shields.io/badge/Streamlit-UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit user interface">
-  <img src="https://img.shields.io/badge/Use-Research%20Only-6B7280?style=for-the-badge" alt="Research use only">
+  <img src="https://img.shields.io/badge/Interface-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit">
+  <img src="https://img.shields.io/badge/Research%20prototype-Not%20for%20diagnosis-6B7280?style=for-the-badge" alt="Research prototype, not for diagnosis">
 </p>
 
-> **A deep-learning research prototype for pixel-wise brain MRI tumor segmentation**, trained with TensorFlow/Keras in Google Colab and designed to support visual inspection of predicted tumor masks.
+<p align="center">
+  <img src="src/Screenshot%202026-10-12%20211436.png" alt="Interactive 3D brain tumor segmentation preview" width="800">
+</p>
 
-## Project Pitch
+## Project overview
 
-Brain tumor boundaries can be difficult to inspect consistently across MRI slices. This project explores how a U-Net semantic-segmentation model can learn to label each pixel in a preprocessed brain MRI slice, then visualize the predicted mask alongside the original scan.
+This project explores **semantic segmentation of brain MRI slices** using a U-Net model built with TensorFlow/Keras. Given a preprocessed grayscale MRI image, the model predicts a class for each pixel. The Streamlit application presents the input alongside a colored segmentation overlay and provides an interactive 3D visualization.
 
-The project combines a Colab training workflow, image/mask preprocessing, model evaluation, and visual outputs—including a prototype 3D visualization from multiple ordered slices. A lightweight Streamlit interface can be used separately for uploading an MRI image and viewing the model prediction.
+The workflow is intended for learning and experimentation: prepare paired MRI images and masks, train and evaluate a segmentation model in the notebook, then inspect predictions in the app. It is **not clinically validated** and must not be used to diagnose or guide treatment.
 
-**Important:** This is an educational/research prototype, not a clinically validated diagnostic tool. Predictions must not be used to make medical decisions.
+## What it does
 
-## Results
+- Trains a U-Net encoder-decoder with skip connections for four-class pixel labeling.
+- Prepares grayscale MRI slices and segmentation masks at `128 × 128`.
+- Reports training and evaluation metrics in the notebook.
+- Accepts one or more image files, or a folder of images, in the Streamlit UI.
+- Shows the selected MRI and its predicted segmentation overlay.
+- Builds colored 3D meshes from predicted labels for visualization.
+- Supports dark and light UI themes and optional display filters.
 
-The following figures are copied from the outputs saved in `cnn_tumor.ipynb`.
+### Segmentation labels
 
-### Final test-set metrics
+The notebook remaps source mask label `4` to model index `3`. Confirm this mapping against the dataset and preprocessing used for your own run.
 
-| Metric | Recorded value |
-|---|---:|
-| Test loss (categorical cross-entropy) | `0.0346` |
-| Test accuracy | `0.9930` (**99.30%**) |
-| Test precision | `0.9936` (**99.36%**) |
-| Test recall | `0.9925` (**99.25%**) |
-
-### Final validation metrics (epoch 10)
-
-| Metric | Recorded value |
-|---|---:|
-| Validation loss | `0.0346` |
-| Validation accuracy | `0.9931` (**99.31%**) |
-| Validation precision | `0.9937` (**99.37%**) |
-| Validation recall | `0.9926` (**99.26%**) |
-
-These are the aggregate metrics reported by the notebook's Keras evaluation. They are **not** class-wise tumor Dice/IoU scores or evidence of clinical performance. Pixel-level metrics can be strongly influenced by the large background area. Class-wise Dice, IoU, sensitivity, specificity, and patient-level evaluation should be added before drawing stronger conclusions.
-
-## Dataset and split
-
-The notebook reports **11,163 matching image–mask pairs** after preprocessing.
-
-| Split | Image–mask pairs | Approximate share |
-|---|---:|---:|
-| Training | 7,814 | 70% |
-| Validation | 1,674 | 15% |
-| Test | 1,675 | 15% |
-| **Total** | **11,163** | **100%** |
-
-The notebook shuffles paired slices with `random_state=42` and then splits the slices. It does not demonstrate a patient-level split. If multiple slices from the same patient appear in different splits, the evaluation may be optimistic; patient-level separation is recommended for a more reliable estimate of generalization.
-
-The notebook references BraTS 2021 data. Check the original dataset terms and access conditions before redistributing data. Do not commit the MRI dataset or private patient data to this repository.
-
-## Model and training setup
-
-- **Architecture:** U-Net encoder–decoder with skip connections.
-- **Framework:** TensorFlow / Keras.
-- **Input shape:** `128 × 128 × 1` (grayscale MRI slice).
-- **Output:** Four-class pixel-wise segmentation.
-- **Total parameters:** `7,707,652`.
-- **Trainable parameters:** `7,702,020`.
-- **Non-trainable parameters:** `5,632`.
-- **Optimizer:** Adam.
-- **Learning rate:** `0.0001`.
-- **Loss:** Categorical cross-entropy.
-- **Batch size:** `32`.
-- **Maximum epochs configured:** `10`.
-- **Checkpoint:** `best_unet_model.keras`, saved when validation loss improves.
-- **Early stopping:** monitors validation loss with patience `2`; the saved run restored weights from epoch 10.
-
-### Preprocessing in the notebook
-
-1. MRI slices and masks are resized to `128 × 128`.
-2. A Gaussian blur with a `5 × 5` kernel is applied to image slices.
-3. Grayscale image values are converted to `float32` and divided by `255.0`.
-4. The mask label `4` is remapped to class index `3`.
-5. Masks are converted to four-class one-hot representations.
-
-The class-index convention used by the notebook is:
-
-| Model class index | Source mask label | Meaning |
+| Model index | Source mask label | Region |
 |---:|---:|---|
-| 0 | 0 | Background |
-| 1 | 1 | NCR/NET (as labelled in the source masks) |
-| 2 | 2 | Edema |
-| 3 | 4 | Enhancing tumor |
+| **0** | 0 | Background |
+| **1** | 1 | NCR/NET |
+| **2** | 2 | Edema |
+| **3** | 4 | Enhancing tumor |
 
-Verify these labels against the exact dataset/version and mask preprocessing used in your workflow before interpreting results.
+## Project structure
 
-## Features
-
-- Colab notebook with preprocessing and training steps.
-- Paired MRI image/mask processing.
-- U-Net model training with checkpointing and early stopping.
-- Training/validation accuracy and loss plots.
-- Test-set evaluation.
-- Visual comparison of original scan, ground-truth mask, predicted mask, and tumor extraction.
-- Prototype 3D visualization built from multiple slices.
-- Intended integration with a simple upload-based Streamlit UI.
-
-### About the 3D view
-
-The notebook's 3D visualization searches for multiple slices associated with a patient ID and stacks them to create a surface view. A meaningful reconstruction requires correctly matched, ordered slices from the same scan and appropriate spatial spacing/orientation. The rendered surface is for visualization only and should not be treated as a clinically accurate 3D reconstruction without those checks.
-
-## Repository structure
-
-A suggested layout for publishing the project:
+The repository currently uses root-level Python and notebook files; `src/` contains viewer screenshots.
 
 ```text
-brain-tumor-segmentation-unet/
-├── notebooks/
-│   └── cnn_tumor.ipynb
-├── src/
-│   ├── model_loader.py
-│   └── preprocessing.py
-├── app.py
-├── outputs/
-│   ├── sample_mri.png
-│   ├── ground_truth_mask.png
-│   ├── predicted_mask.png
-│   └── segmentation_overlay.png
-├── requirements.txt
-├── .gitignore
-└── README.md
+CNN_BRAIN_TUMOR/
+├── app.py                         # Streamlit interface and 3D viewer
+├── model_loader.py                # Loads the trained Keras model
+├── preprocessing.py               # Image decoding, preprocessing, prediction helpers
+├── cnn_tumor.ipynb                # Training, evaluation, and notebook visualizations
+├── requirements.txt               # Python dependencies
+├── .gitignore                     # Ignores virtual environments and generated files
+├── .gitattributes                 # Keeps notebook line endings as LF
+└── src/
+    ├── Screenshot 2026-10-12 210557.png
+    ├── Screenshot 2026-10-12 211436.png
+    └── image.png
 ```
 
-Adjust the tree to match the files that actually exist in your repository. Only include output images that you have generated and verified.
+The trained model file is **not stored in this repository**. `model_loader.py` currently expects it at `E:\best_unet_model.keras`.
 
-## Run the notebook
+## Run the Streamlit app
 
-1. Open `notebooks/cnn_tumor.ipynb` in Google Colab.
-2. Select a suitable runtime (GPU can reduce training time).
-3. Follow the notebook's dataset setup and access steps. Dataset access credentials should be configured privately in Colab Secrets or another secure method—not written into the notebook.
-4. Run preprocessing, dataset splitting, model training, evaluation, and visualization cells in order.
-5. Save a copy of the trained model as `best_unet_model.keras`.
+Use Python 3.11 and run these commands from the repository root.
 
-The notebook currently includes Google Drive and dataset-archive paths that are specific to the original Colab environment. Update those paths if you use a different Drive account or folder layout.
-
-## Run the Streamlit UI
-
-If `app.py`, `src/model_loader.py`, and `src/preprocessing.py` are present in the repository:
-
-```bash
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Place the trained `best_unet_model.keras` where the model loader expects it, or update the model path in your configuration. The `.keras` model is large, so consider GitHub Releases or external model storage if it is not appropriate for a normal Git commit.
+Before starting the app, make the trained model available at `E:\best_unet_model.keras`, or update `MODEL_PATH` in `model_loader.py` to point to your local `.keras` file. Keep large model files and private MRI data out of source control.
 
-The exact `requirements.txt` should be generated from the imports used by your actual UI and notebook; dependencies may include TensorFlow, Streamlit, OpenCV, NumPy, Matplotlib, scikit-image, and Plotly.
+Upload one image to view a prediction, or upload a set of ordered slices from the **same scan** for a more meaningful multi-slice visualization. The app orders uploads by filename; name slices consistently (for example, `slice_001.png`, `slice_002.png`, ...).
 
-## Example outputs
+## Run the training notebook
 
-Commit a few non-sensitive, representative examples so visitors can inspect results without running the notebook:
+Open [`cnn_tumor.ipynb`](cnn_tumor.ipynb) in Jupyter or Google Colab. Follow its cells in order for dataset setup, preprocessing, splitting, training, evaluation, and visualization. The notebook contains environment-specific dataset and Drive paths; update those paths for your own setup. Store access credentials in a secure environment or notebook secret store, never directly in the notebook.
 
-- Original MRI slice
-- Ground-truth segmentation mask
-- Predicted segmentation mask
-- Overlay of prediction on the MRI
-- Training/validation curves
-- 3D visualization screenshot, if generated from verified ordered slices
+The notebook configures a checkpoint named `best_unet_model.keras`. Copy or download the resulting model to the path expected by `model_loader.py` before launching the app.
 
-For notebooks to show results directly on GitHub, save the `.ipynb` **with output cells** before uploading it.
+## Model and training details
 
-## Limitations and next steps
+| Setting | Value |
+|---|---|
+| **Architecture** | U-Net encoder-decoder with skip connections |
+| **Framework** | TensorFlow / Keras |
+| **Input** | `128 × 128 × 1` grayscale slice |
+| **Output** | Four-class pixel-wise segmentation |
+| **Optimizer** | Adam (`0.0001` learning rate) |
+| **Loss** | Categorical cross-entropy |
+| **Batch size** | `32` |
+| **Epoch limit** | `10` |
+| **Checkpoint** | `best_unet_model.keras`, selected by validation loss |
+| **Early stopping** | Validation-loss patience of `2` |
+| **Parameters** | `7,707,652` total (`7,702,020` trainable) |
 
-- This project is a prototype and has not been established as clinically safe or validated for diagnosis.
-- The reported aggregate metrics are not substitutes for class-wise Dice/IoU and patient-level validation.
-- A patient-level train/validation/test split should be verified to avoid slice-level leakage.
-- Add per-class Dice, IoU, confusion matrices, and visual failure-case analysis.
-- Verify preprocessing and label mappings against the exact dataset version.
-- Validate the 3D slice order, spacing, and orientation before making anatomical claims.
-- Test the upload UI with images that match the training modality and preprocessing assumptions.
+### Preprocessing
 
-## Security and data handling
+As configured in the notebook, images and masks are resized to `128 × 128`; image slices receive a `5 × 5` Gaussian blur and are normalized to `[0, 1]`; source mask label `4` is mapped to model index `3`; and masks are converted to four-class one-hot tensors. The app's prediction preprocessing should remain consistent with the preprocessing used to train the checkpoint.
 
-- **Never commit API tokens, Kaggle credentials, passwords, or other secrets.** If a credential has already been committed to a notebook or pushed to GitHub, revoke/rotate it immediately and remove it from the notebook and Git history as appropriate.
-- Do not publish raw medical data or patient-identifying information.
-- Review dataset licensing and redistribution requirements before sharing any data.
+## Reported notebook results
 
-## Disclaimer
+The values below are copied from the notebook outputs. They describe the reported aggregate pixel-level evaluation, **not** class-wise tumor overlap or clinical effectiveness.
 
-This repository is intended for learning and research into medical-image segmentation. It is not a medical device, does not provide a diagnosis, and must not replace review by qualified medical professionals.
+| Evaluation | Loss | Accuracy | Precision | Recall |
+|---|---:|---:|---:|---:|
+| **Test set** | `0.0346` | **99.30%** | **99.36%** | **99.25%** |
+| **Validation, epoch 10** | `0.0346` | **99.31%** | **99.37%** | **99.26%** |
 
-## Acknowledgements
+The notebook reports **11,163 paired image-mask slices**: 7,814 training, 1,674 validation, and 1,675 test. Its split is performed over shuffled slices, not demonstrated patient-level groups. Slices from one patient may therefore appear across different splits, which can make evaluation optimistic. Patient-level separation and per-class Dice/IoU should be used for stronger validation.
 
-The notebook references the BraTS 2021 brain tumor MRI dataset. Please cite and follow the official dataset terms applicable to the data you used. Add any additional source, paper, or repository attribution required by your implementation.
+## Understanding the 3D preview
+
+For multiple uploads, the app stacks the predicted masks and MRI slices into a volume and extracts surfaces for the brain and tumor classes. The best input is a correctly ordered set of slices from one scan, with consistent acquisition and orientation.
+
+When only one image is provided, the app creates a **synthetic tapered preview** by repeating and resizing that slice across depth. It can help demonstrate the viewer, but it does not recover unseen anatomy or represent a true 3D scan. The output is sensitive to slice ordering, intensity thresholding, and model segmentation quality.
+
+## Limitations
+
+- This is an experimental educational project, **not a medical device**.
+- Aggregate pixel accuracy can be dominated by background pixels and does not establish tumor-region quality.
+- The notebook's slice-level split may not measure generalization to unseen patients.
+- Verify class labels, data preprocessing, and dataset version before interpreting predictions.
+- Realistic 3D interpretation requires correctly ordered source slices and spatial metadata.
+- Evaluation should include patient-level separation, per-class Dice/IoU, sensitivity, specificity, and visual failure-case review.
+
+## Data handling and attribution
+
+- Do not commit raw MRI scans, patient-identifying information, credentials, or API tokens.
+- Check the applicable BraTS 2021 access terms and citation requirements before redistributing data.
+- If a secret has been committed, revoke or rotate it and remove it from repository history as appropriate.
+
+The notebook references the **BraTS 2021** dataset. Cite the dataset and any additional models, papers, or resources used in your own work according to their terms.
+
+---
+
+<p align="center"><strong>For research and education only — not for diagnosis or treatment decisions.</strong></p>
